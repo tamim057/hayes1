@@ -2,79 +2,219 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🔥 Eris Duty System PRO</title>
 
 <style>
-body{
+
+*{
     margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
     font-family:Arial;
-    background:linear-gradient(135deg,#0f172a,#1e293b);
+    background:#0b1120;
     color:white;
     display:flex;
     justify-content:center;
     align-items:center;
     min-height:100vh;
+    overflow:hidden;
+    position:relative;
 }
+
+/* DARK SKY */
+
+body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background:
+    radial-gradient(circle at top,#1e3a8a22,transparent 70%),
+    linear-gradient(to bottom,#020617,#0f172a,#111827);
+    z-index:-5;
+}
+
+/* REALISTIC RAIN */
+
+.rain{
+    position:fixed;
+    width:100%;
+    height:100%;
+    top:0;
+    left:0;
+    pointer-events:none;
+    overflow:hidden;
+    z-index:-1;
+}
+
+.drop{
+    position:absolute;
+    bottom:100%;
+    width:2px;
+    height:120px;
+    background:linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0.8)
+    );
+    opacity:0.5;
+    animation:fall linear infinite;
+}
+
+@keyframes fall{
+
+    0%{
+        transform:translateY(-120px) translateX(0);
+        opacity:0;
+    }
+
+    10%{
+        opacity:0.7;
+    }
+
+    100%{
+        transform:translateY(120vh) translateX(-40px);
+        opacity:0;
+    }
+}
+
+/* THUNDER */
+
+.flash{
+    position:fixed;
+    inset:0;
+    background:white;
+    opacity:0;
+    pointer-events:none;
+    z-index:-2;
+    animation:lightning 7s linear infinite;
+}
+
+@keyframes lightning{
+
+    0%{opacity:0;}
+    1%{opacity:0.9;}
+    1.5%{opacity:0;}
+    2%{opacity:0.6;}
+    2.2%{opacity:0;}
+
+    14%{opacity:0;}
+    14.3%{opacity:0.8;}
+    14.5%{opacity:0;}
+
+    50%{opacity:0;}
+    50.2%{opacity:1;}
+    50.4%{opacity:0;}
+    50.6%{opacity:0.7;}
+    50.8%{opacity:0;}
+
+    100%{opacity:0;}
+}
+
+/* PANEL */
 
 .container{
     width:420px;
-    background:#111827;
+    background:rgba(17,24,39,0.75);
+    border:1px solid rgba(255,255,255,0.08);
     padding:25px;
     border-radius:18px;
-    box-shadow:0 0 25px rgba(0,0,0,0.6);
+    box-shadow:
+    0 0 40px rgba(0,0,0,0.7),
+    inset 0 0 20px rgba(255,255,255,0.03);
+    backdrop-filter:blur(10px);
+    z-index:10;
 }
 
-h1{text-align:center;color:#60a5fa;}
+h1{
+    text-align:center;
+    color:#60a5fa;
+    margin-bottom:15px;
+    text-shadow:0 0 10px rgba(96,165,250,0.6);
+}
 
 input{
     width:100%;
     padding:12px;
-    margin:8px 0;
+    margin:10px 0;
     border:none;
     border-radius:10px;
     background:#1f2937;
     color:white;
+    font-size:16px;
 }
 
 button{
     width:100%;
     padding:12px;
-    margin-top:8px;
     border:none;
     border-radius:10px;
     cursor:pointer;
     font-weight:bold;
+    font-size:15px;
+    transition:0.25s;
 }
 
-.login{background:#3b82f6;color:white;}
-.register{background:#8b5cf6;color:white;}
+button:hover{
+    transform:translateY(-2px);
+}
 
-.panel{display:none;margin-top:15px;}
+.login{
+    background:#2563eb;
+    color:white;
+}
 
-.actions{display:flex;gap:10px;}
-.actions button{flex:1;}
+.panel{
+    display:none;
+    margin-top:20px;
+}
 
-.on{background:#22c55e;}
-.off{background:#ef4444;}
+.actions{
+    display:flex;
+    gap:10px;
+}
+
+.actions button{
+    flex:1;
+}
+
+.on{
+    background:#22c55e;
+    color:white;
+}
+
+.off{
+    background:#ef4444;
+    color:white;
+}
 
 .status{
     margin-top:15px;
-    background:#0f172a;
+    background:#0f172acc;
     padding:15px;
     border-radius:12px;
     text-align:center;
+    border:1px solid rgba(255,255,255,0.05);
 }
 
-#timer{
-    font-size:28px;
-    margin-top:10px;
+#state{
+    font-size:18px;
     font-weight:bold;
 }
 
-.bellBtn{
-    display:none;
-    width:100%;
+#timer{
+    font-size:32px;
     margin-top:10px;
+    font-weight:bold;
+    letter-spacing:2px;
+}
+
+.bellBtn{
+    width:100%;
+    margin-top:12px;
     padding:12px;
     border-radius:10px;
     background:linear-gradient(45deg,#f59e0b,#f97316);
@@ -85,23 +225,35 @@ button{
 
 @keyframes pulse{
     0%{transform:scale(1);}
-    50%{transform:scale(1.05);}
+    50%{transform:scale(1.04);}
     100%{transform:scale(1);}
 }
+
+.info{
+    margin-top:15px;
+    background:#1e293bcc;
+    padding:12px;
+    border-radius:10px;
+    font-size:14px;
+    line-height:1.7;
+}
+
 </style>
 </head>
 
 <body>
 
+<div class="rain" id="rain"></div>
+
+<div class="flash"></div>
+
 <div class="container">
 
 <h1>🔥 Duty System PRO</h1>
 
-<input id="user" placeholder="Discord Tag">
-<input id="pass" type="password" placeholder="Password">
+<input id="user" placeholder="Discord User ID">
 
-<button class="login" onclick="login()">Login</button>
-<button class="register" onclick="register()">Register</button>
+<button class="login" onclick="login()">LOGIN</button>
 
 <div class="panel" id="panel">
 
@@ -117,75 +269,104 @@ button{
 <div id="timer">00:00:00</div>
 </div>
 
+<div class="info">
+<b>How Mention Works:</b><br>
+Put Discord User ID.<br><br>
+
+Example:<br>
+123456789012345678<br><br>
+
+Webhook will ping:<br>
+&lt;@123456789012345678&gt;
+</div>
+
 </div>
 
 </div>
 
 <script>
 
-const WEBHOOK_URL = "https://discord.com/api/webhooks/1501942054970982491/0VtmHaOLJdeGjUMVFpvtJ3Wg_MeOnoFqBNzrWFwNWifdS90vvE9XI5COMoPD0ZYmtXNd";
+const WEBHOOK_URL = "YOUR_WEBHOOK_HERE";
 
-let currentUser=null;
-let timer=null;
+let currentUser = null;
+let timer = null;
+
+// AUTO LOAD USER
+
+window.onload = () => {
+
+    const savedUser = localStorage.getItem("discordUser");
+
+    if(savedUser){
+
+        document.getElementById("user").value = savedUser;
+
+        currentUser = savedUser;
+
+        document.getElementById("panel").style.display = "block";
+
+        let users = getUsers();
+
+        if(users[currentUser] && users[currentUser].duty){
+            startTimer();
+        }
+    }
+};
 
 // STORAGE
+
 function getUsers(){
-    return JSON.parse(localStorage.getItem("users")||"{}");
+    return JSON.parse(localStorage.getItem("users") || "{}");
 }
 
-function saveUsers(u){
-    localStorage.setItem("users",JSON.stringify(u));
-}
-
-// REGISTER
-function register(){
-
-    let u=document.getElementById("user").value.trim();
-    let p=document.getElementById("pass").value.trim();
-
-    if(!u||!p) return alert("Fill all fields");
-
-    let users=getUsers();
-
-    if(users[u]) return alert("User exists");
-
-    users[u]={
-        pass:p,
-        duty:false,
-        start:null,
-        grace:false,
-        graceStart:null,
-        total:0
-    };
-
-    saveUsers(users);
-    alert("Registered!");
+function saveUsers(data){
+    localStorage.setItem("users", JSON.stringify(data));
 }
 
 // LOGIN
+
 function login(){
 
-    let u=document.getElementById("user").value.trim();
-    let p=document.getElementById("pass").value.trim();
+    const user = document.getElementById("user").value.trim();
 
-    let users=getUsers();
+    if(!user){
+        alert("Enter Discord User ID");
+        return;
+    }
 
-    if(!users[u]) return alert("Not found");
-    if(users[u].pass!==p) return alert("Wrong password");
+    currentUser = user;
 
-    currentUser=u;
-    document.getElementById("panel").style.display="block";
+    localStorage.setItem("discordUser", user);
+
+    document.getElementById("panel").style.display = "block";
+
+    let users = getUsers();
+
+    if(!users[user]){
+
+        users[user] = {
+            duty:false,
+            start:null,
+            grace:false,
+            graceStart:null,
+            total:0
+        };
+
+        saveUsers(users);
+    }
 }
 
 // ON DUTY
+
 function onDuty(){
 
-    let users=getUsers();
-    let u=users[currentUser];
+    let users = getUsers();
 
-    u.duty=true;
-    u.start=Date.now();
-    u.grace=false;
+    let u = users[currentUser];
+
+    u.duty = true;
+    u.start = Date.now();
+    u.grace = false;
 
     saveUsers(users);
 
@@ -195,126 +376,229 @@ function onDuty(){
 }
 
 // OFF DUTY
+
 function offDuty(){
 
-    let users=getUsers();
-    let u=users[currentUser];
+    let users = getUsers();
 
-    let session=0;
+    let u = users[currentUser];
+
+    let session = 0;
 
     if(u.start){
-        session=Math.floor((Date.now()-u.start)/1000);
-        u.total+=session;
+
+        session = Math.floor((Date.now() - u.start)/1000);
+
+        u.total += session;
     }
 
-    u.duty=false;
-    u.start=null;
-    u.grace=false;
+    u.duty = false;
+    u.start = null;
+    u.grace = false;
 
     saveUsers(users);
 
     clearInterval(timer);
 
-    document.getElementById("state").innerText="OFF DUTY 🔴";
-    document.getElementById("timer").innerText="00:00:00";
-    document.getElementById("bell").style.display="none";
+    document.getElementById("state").innerText = "OFF DUTY 🔴";
+    document.getElementById("timer").innerText = "00:00:00";
 
     sendWebhook("🔴 OFF DUTY",session);
 }
 
 // EXTEND DUTY
+
 function extendDuty(){
 
-    let users=getUsers();
-    let u=users[currentUser];
+    let users = getUsers();
 
-    u.start=Date.now();
-    u.grace=false;
+    let u = users[currentUser];
+
+    if(!u.start) return;
+
+    let diff = Math.floor((Date.now() - u.start)/1000);
+
+    // 25 MINUTES LOCK
+    if(diff < 1500){
+
+        let remain = 1500 - diff;
+
+        let mins = Math.floor(remain/60);
+        let secs = remain % 60;
+
+        alert(
+            "Bell unlocks after 25 minutes.\nRemaining: "
+            + mins + "m " + secs + "s"
+        );
+
+        return;
+    }
+
+    u.start = Date.now();
+
+    u.grace = false;
+    u.graceStart = Date.now();
 
     saveUsers(users);
 
-    document.getElementById("bell").style.display="none";
+    alert("Duty Extended Successfully 🔔");
 }
 
-// TIMER SYSTEM
+// TIMER
+
 function startTimer(){
 
     clearInterval(timer);
 
-    timer=setInterval(()=>{
+    timer = setInterval(()=>{
 
-        let users=getUsers();
-        let u=users[currentUser];
+        let users = getUsers();
+
+        let u = users[currentUser];
 
         if(!u || !u.start) return;
 
-        let diff=Math.floor((Date.now()-u.start)/1000);
+        let diff = Math.floor((Date.now() - u.start)/1000);
 
-        // 2 HOURS
-        if(diff>=7200 && !u.grace){
-            u.grace=true;
-            u.graceStart=Date.now();
+        // 25 MINUTES LIMIT
+        if(diff >= 1500 && !u.grace){
+
+            u.grace = true;
+            u.graceStart = Date.now();
+
             saveUsers(users);
         }
 
         // GRACE MODE
         if(u.grace){
-            document.getElementById("state").innerText="⚠️ GRACE MODE";
-            document.getElementById("bell").style.display="block";
 
-            let g=Math.floor((Date.now()-u.graceStart)/1000);
+            document.getElementById("state").innerText = "⚠️ GRACE MODE";
 
-            if(g>=600){
+            let g = Math.floor((Date.now() - u.graceStart)/1000);
+
+            // 5 MINUTES
+            if(g >= 300){
+
                 offDuty();
+
                 return;
             }
+
         }else{
-            document.getElementById("state").innerText="ON DUTY 🟢";
+
+            document.getElementById("state").innerText = "ON DUTY 🟢";
         }
 
-        let h=String(Math.floor(diff/3600)).padStart(2,'0');
-        let m=String(Math.floor((diff%3600)/60)).padStart(2,'0');
-        let s=String(diff%60).padStart(2,'0');
+        let h = String(Math.floor(diff/3600)).padStart(2,'0');
+        let m = String(Math.floor((diff%3600)/60)).padStart(2,'0');
+        let s = String(diff%60).padStart(2,'0');
 
-        document.getElementById("timer").innerText=`${h}:${m}:${s}`;
+        document.getElementById("timer").innerText = `${h}:${m}:${s}`;
 
     },1000);
 }
 
-// 🔥 FIXED DISCORD WEBHOOK (EMBED STYLE)
+// WEBHOOK
+
 function sendWebhook(action,session){
 
-    let users=getUsers();
-    let u=users[currentUser];
+    let users = getUsers();
 
-    let total=u.total||0;
+    let u = users[currentUser];
 
-    let h=Math.floor(total/3600);
-    let m=Math.floor((total%3600)/60);
+    let total = u.total || 0;
+
+    let totalH = Math.floor(total/3600);
+    let totalM = Math.floor((total%3600)/60);
+
+    const mention = `<@${currentUser}>`;
 
     fetch(WEBHOOK_URL,{
+
         method:"POST",
+
         headers:{
             "Content-Type":"application/json"
         },
+
         body:JSON.stringify({
-            username:"🔥 Hayes Kamla",
+
+            content: mention,
+
+            username:"🔥 Duty System",
+
             embeds:[{
+
                 title:"📊 Duty Report",
+
                 color:u.duty ? 0x00ff00 : 0xff0000,
+
                 fields:[
-                    {name:"👤 User",value:currentUser,inline:true},
-                    {name:"⚡ Action",value:action,inline:true},
-                    {name:"⏱ Session",value:Math.floor(session/60)+" min",inline:true},
-                    {name:"📅 Today Total",value:`${h}h ${m}m`,inline:false}
+
+                    {
+                        name:"👤 Member",
+                        value:mention,
+                        inline:true
+                    },
+
+                    {
+                        name:"⚡ Action",
+                        value:action,
+                        inline:true
+                    },
+
+                    {
+                        name:"⏱ Session",
+                        value:Math.floor(session/60)+" min",
+                        inline:true
+                    },
+
+                    {
+                        name:"📅 Today Total",
+                        value:`${totalH}h ${totalM}m`,
+                        inline:false
+                    }
+
                 ],
+
                 footer:{
                     text:"Duty System PRO"
                 },
+
                 timestamp:new Date().toISOString()
+
             }]
+
         })
-    }).catch(err=>console.log("Webhook error:",err));
+
+    }).catch(err=>console.log(err));
+}
+
+// RAIN GENERATOR
+
+const rain = document.getElementById("rain");
+
+for(let i=0;i<250;i++){
+
+    let drop = document.createElement("div");
+
+    drop.classList.add("drop");
+
+    drop.style.left = Math.random()*100 + "vw";
+
+    drop.style.animationDuration =
+    (0.35 + Math.random()*0.35) + "s";
+
+    drop.style.animationDelay =
+    Math.random()*2 + "s";
+
+    drop.style.opacity =
+    0.2 + Math.random()*0.5;
+
+    drop.style.height =
+    80 + Math.random()*120 + "px";
+
+    rain.appendChild(drop);
 }
 
 </script>

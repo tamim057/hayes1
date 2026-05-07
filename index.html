@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🔥 Eris Duty System PRO</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:linear-gradient(135deg,#0f172a,#1e293b);
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.container{
+    width:420px;
+    background:#111827;
+    padding:25px;
+    border-radius:18px;
+    box-shadow:0 0 25px rgba(0,0,0,0.6);
+}
+
+h1{text-align:center;color:#60a5fa;}
+
+input{
+    width:100%;
+    padding:12px;
+    margin:8px 0;
+    border:none;
+    border-radius:10px;
+    background:#1f2937;
+    color:white;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:8px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.login{background:#3b82f6;color:white;}
+.register{background:#8b5cf6;color:white;}
+
+.panel{display:none;margin-top:15px;}
+
+.actions{display:flex;gap:10px;}
+.actions button{flex:1;}
+
+.on{background:#22c55e;}
+.off{background:#ef4444;}
+
+.status{
+    margin-top:15px;
+    background:#0f172a;
+    padding:15px;
+    border-radius:12px;
+    text-align:center;
+}
+
+#timer{
+    font-size:28px;
+    margin-top:10px;
+    font-weight:bold;
+}
+
+.bellBtn{
+    display:none;
+    width:100%;
+    margin-top:10px;
+    padding:12px;
+    border-radius:10px;
+    background:linear-gradient(45deg,#f59e0b,#f97316);
+    color:black;
+    font-weight:bold;
+    animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+    0%{transform:scale(1);}
+    50%{transform:scale(1.05);}
+    100%{transform:scale(1);}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🔥 Duty System PRO</h1>
+
+<input id="user" placeholder="Discord Tag">
+<input id="pass" type="password" placeholder="Password">
+
+<button class="login" onclick="login()">Login</button>
+<button class="register" onclick="register()">Register</button>
+
+<div class="panel" id="panel">
+
+<div class="actions">
+<button class="on" onclick="onDuty()">ON DUTY</button>
+<button class="off" onclick="offDuty()">OFF DUTY</button>
+</div>
+
+<button id="bell" class="bellBtn" onclick="extendDuty()">🔔 Extend Duty</button>
+
+<div class="status">
+<div id="state">OFF DUTY 🔴</div>
+<div id="timer">00:00:00</div>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const WEBHOOK_URL = "https://discord.com/api/webhooks/1501895480781705349/Tv_6YmCQQs3Vwaf1ItzJ6JhbWrh_HAofwqyKtrLMAG5_z96HpHtJDR0ti14arSnPONZw";
+
+let currentUser=null;
+let timer=null;
+
+// STORAGE
+function getUsers(){
+    return JSON.parse(localStorage.getItem("users")||"{}");
+}
+
+function saveUsers(u){
+    localStorage.setItem("users",JSON.stringify(u));
+}
+
+// REGISTER
+function register(){
+
+    let u=document.getElementById("user").value.trim();
+    let p=document.getElementById("pass").value.trim();
+
+    if(!u||!p) return alert("Fill all fields");
+
+    let users=getUsers();
+
+    if(users[u]) return alert("User exists");
+
+    users[u]={
+        pass:p,
+        duty:false,
+        start:null,
+        grace:false,
+        graceStart:null,
+        total:0
+    };
+
+    saveUsers(users);
+    alert("Registered!");
+}
+
+// LOGIN
+function login(){
+
+    let u=document.getElementById("user").value.trim();
+    let p=document.getElementById("pass").value.trim();
+
+    let users=getUsers();
+
+    if(!users[u]) return alert("Not found");
+    if(users[u].pass!==p) return alert("Wrong password");
+
+    currentUser=u;
+    document.getElementById("panel").style.display="block";
+}
+
+// ON DUTY
+function onDuty(){
+
+    let users=getUsers();
+    let u=users[currentUser];
+
+    u.duty=true;
+    u.start=Date.now();
+    u.grace=false;
+
+    saveUsers(users);
+
+    sendWebhook("🟢 ON DUTY STARTED",0);
+
+    startTimer();
+}
+
+// OFF DUTY
+function offDuty(){
+
+    let users=getUsers();
+    let u=users[currentUser];
+
+    let session=0;
+
+    if(u.start){
+        session=Math.floor((Date.now()-u.start)/1000);
+        u.total+=session;
+    }
+
+    u.duty=false;
+    u.start=null;
+    u.grace=false;
+
+    saveUsers(users);
+
+    clearInterval(timer);
+
+    document.getElementById("state").innerText="OFF DUTY 🔴";
+    document.getElementById("timer").innerText="00:00:00";
+    document.getElementById("bell").style.display="none";
+
+    sendWebhook("🔴 OFF DUTY",session);
+}
+
+// EXTEND DUTY
+function extendDuty(){
+
+    let users=getUsers();
+    let u=users[currentUser];
+
+    u.start=Date.now();
+    u.grace=false;
+
+    saveUsers(users);
+
+    document.getElementById("bell").style.display="none";
+}
+
+// TIMER SYSTEM
+function startTimer(){
+
+    clearInterval(timer);
+
+    timer=setInterval(()=>{
+
+        let users=getUsers();
+        let u=users[currentUser];
+
+        if(!u || !u.start) return;
+
+        let diff=Math.floor((Date.now()-u.start)/1000);
+
+        // 2 HOURS
+        if(diff>=7200 && !u.grace){
+            u.grace=true;
+            u.graceStart=Date.now();
+            saveUsers(users);
+        }
+
+        // GRACE MODE
+        if(u.grace){
+            document.getElementById("state").innerText="⚠️ GRACE MODE";
+            document.getElementById("bell").style.display="block";
+
+            let g=Math.floor((Date.now()-u.graceStart)/1000);
+
+            if(g>=600){
+                offDuty();
+                return;
+            }
+        }else{
+            document.getElementById("state").innerText="ON DUTY 🟢";
+        }
+
+        let h=String(Math.floor(diff/3600)).padStart(2,'0');
+        let m=String(Math.floor((diff%3600)/60)).padStart(2,'0');
+        let s=String(diff%60).padStart(2,'0');
+
+        document.getElementById("timer").innerText=`${h}:${m}:${s}`;
+
+    },1000);
+}
+
+// 🔥 FIXED DISCORD WEBHOOK (EMBED STYLE)
+function sendWebhook(action,session){
+
+    let users=getUsers();
+    let u=users[currentUser];
+
+    let total=u.total||0;
+
+    let h=Math.floor(total/3600);
+    let m=Math.floor((total%3600)/60);
+
+    fetch(WEBHOOK_URL,{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            username:"🔥 Eris Duty System",
+            embeds:[{
+                title:"📊 Duty Report",
+                color:u.duty ? 0x00ff00 : 0xff0000,
+                fields:[
+                    {name:"👤 User",value:currentUser,inline:true},
+                    {name:"⚡ Action",value:action,inline:true},
+                    {name:"⏱ Session",value:Math.floor(session/60)+" min",inline:true},
+                    {name:"📅 Today Total",value:`${h}h ${m}m`,inline:false}
+                ],
+                footer:{
+                    text:"Duty System PRO"
+                },
+                timestamp:new Date().toISOString()
+            }]
+        })
+    }).catch(err=>console.log("Webhook error:",err));
+}
+
+</script>
+
+</body>
+</html>

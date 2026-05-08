@@ -264,7 +264,7 @@ button:hover{
 <div class="info">
 <b> To stay active follow this </b><br><br>
 25 Minutes = Bell Required<br>
-5 Minutes = Auto OFF DUTY<br><br>
+10 Seconds = Auto OFF DUTY<br><br>
 
 Today Total resets every day at 12:00 AM Bangladesh Time.
 </div>
@@ -279,10 +279,11 @@ const WEBHOOK_URL = "https://discord.com/api/webhooks/1501942054970982491/0VtmHa
 
 // TEST MODE
 const BELL_TIME = 1500;
-const GRACE_TIME = 300;
+const GRACE_TIME = 10;
 
 let currentUser = null;
 let timer = null;
+let beepInterval = null;
 
 // AUTO LOAD
 
@@ -455,6 +456,7 @@ function offDuty(auto = false){
 
     document.getElementById("bell").style.animation =
     "none";
+    stopBeep();
 
     let action = auto
     ? "⛔ AUTO OFF DUTY"
@@ -490,6 +492,7 @@ function extendDuty(){
 
     document.getElementById("bell").style.animation =
     "none";
+    stopBeep();
 
     document.getElementById("state").innerText =
     "ON DUTY 🟢";
@@ -498,6 +501,32 @@ function extendDuty(){
 }
 
 // TIMER
+function beep(){
+    let ctx = new (window.AudioContext || window.webkitAudioContext)();
+    let osc = ctx.createOscillator();
+    let gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = "sine";
+    osc.frequency.value = 900;
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+}
+
+function startBeep(){
+    stopBeep();
+    beepInterval = setInterval(beep, 1000);
+}
+
+function stopBeep(){
+    if(beepInterval){
+        clearInterval(beepInterval);
+        beepInterval = null;
+    }
+}
 
 function startTimer(){
 
@@ -534,6 +563,7 @@ function startTimer(){
 
                 document.getElementById("bell").style.animation =
                 "pulse 1s infinite";
+                startBeep();
             }
         }
 

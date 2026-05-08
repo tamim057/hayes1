@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🔥Hayes Kamla System PRO</title>
+<title>🔥 Hayes Kamla System PRO</title>
 
 <style>
 
@@ -25,8 +25,6 @@ body{
     position:relative;
 }
 
-/* DARK SKY */
-
 body::before{
     content:"";
     position:fixed;
@@ -36,8 +34,6 @@ body::before{
     linear-gradient(to bottom,#020617,#0f172a,#111827);
     z-index:-5;
 }
-
-/* REALISTIC RAIN */
 
 .rain{
     position:fixed;
@@ -81,8 +77,6 @@ body::before{
     }
 }
 
-/* THUNDER */
-
 .flash{
     position:fixed;
     inset:0;
@@ -113,8 +107,6 @@ body::before{
 
     100%{opacity:0;}
 }
-
-/* PANEL */
 
 .container{
     width:420px;
@@ -220,12 +212,12 @@ button:hover{
     background:linear-gradient(45deg,#f59e0b,#f97316);
     color:black;
     font-weight:bold;
-    animation:pulse 1.5s infinite;
+    animation:none;
 }
 
 @keyframes pulse{
     0%{transform:scale(1);}
-    50%{transform:scale(1.04);}
+    50%{transform:scale(1.06);}
     100%{transform:scale(1);}
 }
 
@@ -270,14 +262,11 @@ button:hover{
 </div>
 
 <div class="info">
-<b>How Mention Works:</b><br>
-Put Discord User ID.<br><br>
+<b> To stay active follow this </b><br><br>
+25 Minutes = Bell Required<br>
+5 Minutes = Auto OFF DUTY<br><br>
 
-Example:<br>
-123456789012345678<br><br>
-
-Webhook will ping:<br>
-&lt;@123456789012345678&gt;
+Today Total resets every day at 12:00 AM Bangladesh Time.
 </div>
 
 </div>
@@ -288,10 +277,14 @@ Webhook will ping:<br>
 
 const WEBHOOK_URL = "https://discord.com/api/webhooks/1501942054970982491/0VtmHaOLJdeGjUMVFpvtJ3Wg_MeOnoFqBNzrWFwNWifdS90vvE9XI5COMoPD0ZYmtXNd";
 
+// TEST MODE
+const BELL_TIME = 1500;
+const GRACE_TIME = 300;
+
 let currentUser = null;
 let timer = null;
 
-// AUTO LOAD USER
+// AUTO LOAD
 
 window.onload = () => {
 
@@ -313,10 +306,48 @@ window.onload = () => {
     }
 };
 
-// STORAGE
+// USERS
 
 function getUsers(){
-    return JSON.parse(localStorage.getItem("users") || "{}");
+
+    let users = JSON.parse(
+        localStorage.getItem("users") || "{}"
+    );
+
+    // BANGLADESH TIME
+    const bdDate = new Date(
+        new Date().toLocaleString("en-US", {
+            timeZone:"Asia/Dhaka"
+        })
+    );
+
+    const today =
+    bdDate.getFullYear() + "-" +
+    (bdDate.getMonth()+1) + "-" +
+    bdDate.getDate();
+
+    for(let id in users){
+
+        if(!users[id].lastReset){
+
+            users[id].lastReset = today;
+        }
+
+        // DAILY RESET
+        if(users[id].lastReset !== today){
+
+            users[id].total = 0;
+
+            users[id].lastReset = today;
+        }
+    }
+
+    localStorage.setItem(
+        "users",
+        JSON.stringify(users)
+    );
+
+    return users;
 }
 
 function saveUsers(data){
@@ -347,9 +378,11 @@ function login(){
         users[user] = {
             duty:false,
             start:null,
-            grace:false,
-            graceStart:null,
-            total:0
+            bellRequired:false,
+            bellStart:null,
+            total:0,
+            lastCycle:0,
+            lastReset:""
         };
 
         saveUsers(users);
@@ -365,8 +398,14 @@ function onDuty(){
     let u = users[currentUser];
 
     u.duty = true;
+
     u.start = Date.now();
-    u.grace = false;
+
+    u.bellRequired = false;
+
+    u.bellStart = null;
+
+    u.lastCycle = 0;
 
     saveUsers(users);
 
@@ -377,7 +416,7 @@ function onDuty(){
 
 // OFF DUTY
 
-function offDuty(){
+function offDuty(auto = false){
 
     let users = getUsers();
 
@@ -387,26 +426,44 @@ function offDuty(){
 
     if(u.start){
 
-        session = Math.floor((Date.now() - u.start)/1000);
+        session = Math.floor(
+            (Date.now() - u.start)/1000
+        );
 
         u.total += session;
     }
 
     u.duty = false;
+
     u.start = null;
-    u.grace = false;
+
+    u.bellRequired = false;
+
+    u.bellStart = null;
+
+    u.lastCycle = 0;
 
     saveUsers(users);
 
     clearInterval(timer);
 
-    document.getElementById("state").innerText = "OFF DUTY 🔴";
-    document.getElementById("timer").innerText = "00:00:00";
+    document.getElementById("state").innerText =
+    "OFF DUTY 🔴";
 
-    sendWebhook("🔴 OFF DUTY",session);
+    document.getElementById("timer").innerText =
+    "00:00:00";
+
+    document.getElementById("bell").style.animation =
+    "none";
+
+    let action = auto
+    ? "⛔ AUTO OFF DUTY"
+    : "🔴 OFF DUTY";
+
+    sendWebhook(action, session);
 }
 
-// EXTEND DUTY
+// BELL CLICK
 
 function extendDuty(){
 
@@ -414,34 +471,30 @@ function extendDuty(){
 
     let u = users[currentUser];
 
-    if(!u.start) return;
+    if(!u.duty) return;
 
-    let diff = Math.floor((Date.now() - u.start)/1000);
+    if(!u.bellRequired){
 
-    // 25 MINUTES LOCK
-    if(diff < 1500){
-
-        let remain = 1500 - diff;
-
-        let mins = Math.floor(remain/60);
-        let secs = remain % 60;
-
-        alert(
-            "Bell unlocks after 25 minutes.\nRemaining: "
-            + mins + "m " + secs + "s"
-        );
+        alert("Bell is not required yet.");
 
         return;
     }
 
-    u.start = Date.now();
+    // CONTINUE DUTY WITHOUT RESETTING TIMER
 
-    u.grace = false;
-    u.graceStart = Date.now();
+    u.bellRequired = false;
+
+    u.bellStart = null;
 
     saveUsers(users);
 
-    alert("Duty Extended Successfully 🔔");
+    document.getElementById("bell").style.animation =
+    "none";
+
+    document.getElementById("state").innerText =
+    "ON DUTY 🟢";
+
+    alert("Duty Continued Successfully 🔔");
 }
 
 // TIMER
@@ -456,44 +509,68 @@ function startTimer(){
 
         let u = users[currentUser];
 
-        if(!u || !u.start) return;
+        if(!u || !u.start || !u.duty) return;
 
-        let diff = Math.floor((Date.now() - u.start)/1000);
+        let diff = Math.floor(
+            (Date.now() - u.start)/1000
+        );
 
-        // 25 MINUTES LIMIT
-        if(diff >= 1500 && !u.grace){
+        // EVERY 10 SECONDS
+        if(diff >= BELL_TIME){
 
-            u.grace = true;
-            u.graceStart = Date.now();
+            let cycles = Math.floor(diff / BELL_TIME);
 
-            saveUsers(users);
+            let lastCycle = u.lastCycle || 0;
+
+            if(cycles > lastCycle){
+
+                u.lastCycle = cycles;
+
+                u.bellRequired = true;
+
+                u.bellStart = Date.now();
+
+                saveUsers(users);
+
+                document.getElementById("bell").style.animation =
+                "pulse 1s infinite";
+            }
         }
 
-        // GRACE MODE
-        if(u.grace){
+        // WAITING FOR BELL
+        if(u.bellRequired){
 
-            document.getElementById("state").innerText = "⚠️ GRACE MODE";
+            let grace = Math.floor(
+                (Date.now() - u.bellStart)/1000
+            );
 
-            let g = Math.floor((Date.now() - u.graceStart)/1000);
+            let remain = GRACE_TIME - grace;
 
-            // 5 MINUTES
-            if(g >= 300){
+            document.getElementById("state").innerText =
+            `⚠️ CLICK BELL (${remain}s)`;
 
-                offDuty();
+            // AUTO OFF DUTY
+            if(grace >= GRACE_TIME){
+
+                offDuty(true);
 
                 return;
             }
 
         }else{
 
-            document.getElementById("state").innerText = "ON DUTY 🟢";
+            document.getElementById("state").innerText =
+            "ON DUTY 🟢";
         }
 
         let h = String(Math.floor(diff/3600)).padStart(2,'0');
+
         let m = String(Math.floor((diff%3600)/60)).padStart(2,'0');
+
         let s = String(diff%60).padStart(2,'0');
 
-        document.getElementById("timer").innerText = `${h}:${m}:${s}`;
+        document.getElementById("timer").innerText =
+        `${h}:${m}:${s}`;
 
     },1000);
 }
@@ -509,6 +586,7 @@ function sendWebhook(action,session){
     let total = u.total || 0;
 
     let totalH = Math.floor(total/3600);
+
     let totalM = Math.floor((total%3600)/60);
 
     const mention = `<@${currentUser}>`;
@@ -523,7 +601,7 @@ function sendWebhook(action,session){
 
         body:JSON.stringify({
 
-            content: mention,
+            content:mention,
 
             username:"🔥 Duty System",
 
@@ -549,7 +627,10 @@ function sendWebhook(action,session){
 
                     {
                         name:"⏱ Session",
-                        value:Math.floor(session/60)+" min",
+                        value:
+                        Math.floor(session/3600)+"h "+
+                        Math.floor((session%3600)/60)+"m "+
+                        (session%60)+"s",
                         inline:true
                     },
 
@@ -574,7 +655,7 @@ function sendWebhook(action,session){
     }).catch(err=>console.log(err));
 }
 
-// RAIN GENERATOR
+// RAIN EFFECT
 
 const rain = document.getElementById("rain");
 
